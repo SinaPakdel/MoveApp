@@ -1,17 +1,19 @@
 package ir.sina.movieapp.di
 
-import android.util.Log
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityComponent
 import dagger.hilt.components.SingletonComponent
-import ir.sina.movieapp.data.TestInterface
-import ir.sina.movieapp.data.TestInterfaceImpl
-import ir.sina.movieapp.ui.home.GameManager
+import ir.sina.movieapp.data.MovieService
+import okhttp3.HttpUrl
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.create
 import javax.inject.Named
-import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Module
@@ -19,32 +21,45 @@ import javax.inject.Singleton
 object AppModule {
 
     @Provides
+    fun provideInterceptor() = Interceptor { chain ->
+        val url = chain.request()
+            .url
+            .newBuilder()
+            .addQueryParameter("api_key", "3f2c9c04c927e1283a2d15121fdb299c")
+            .addQueryParameter("language", "en")
+            .build()
+        val request = chain.request()
+            .newBuilder()
+            .url(url)
+            .build()
+        chain.proceed(request)
+    }
+
+    @Provides
     @Singleton
-    fun provideGameManager() = GameManager()
+    fun provideOkHttpLog(): HttpLoggingInterceptor {
+        val httpLoggingInterceptor = HttpLoggingInterceptor()
+        httpLoggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
+        return httpLoggingInterceptor
+    }
 
     @Provides
-    @MohsenName
-    fun provideMohsenName() :String= "Mohesn"
+    fun provideOkHttpClient(
+        interceptor: Interceptor,
+        httpLoggingInterceptor: HttpLoggingInterceptor
+    ) = OkHttpClient.Builder()
+        .addInterceptor(httpLoggingInterceptor)
+        .addInterceptor(interceptor)
+        .build()
+
     @Provides
-    @EhsanName
-    fun provideEhsanName() :String= "Ehsan"
+    fun provideRetrofit(client: OkHttpClient) = Retrofit.Builder()
+        .baseUrl("https://api.themoviedb.org/3/")
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
 
+    @Provides
+    fun provideMovieService(retrofit: Retrofit) =
+        retrofit.create(MovieService::class.java)
 }
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class CustomModule {
-
-    @Binds
-    abstract fun provideTestInterfaceImpl(
-        testInterfaceImpl: TestInterfaceImpl
-    ): TestInterface
-}
-
-
-@Qualifier
-@Retention(AnnotationRetention.RUNTIME)
-annotation class MohsenName
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class EhsanName
