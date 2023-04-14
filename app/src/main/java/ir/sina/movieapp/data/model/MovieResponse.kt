@@ -1,5 +1,7 @@
 package ir.sina.movieapp.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class MovieResponse(
     val page: Int?,
     val results: List<Result?>?,

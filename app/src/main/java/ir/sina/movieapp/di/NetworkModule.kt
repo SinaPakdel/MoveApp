@@ -5,28 +5,43 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import ir.sina.movieapp.data.MovieService
-import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.create
-import javax.inject.Named
+import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule {
+object NetworkModule {
 
     @Provides
-    fun provideInterceptor() = Interceptor { chain ->
+    @Singleton
+    @MyFirstLanguage
+    fun provideInterceptorEnglish() = Interceptor { chain ->
         val url = chain.request()
             .url
             .newBuilder()
             .addQueryParameter("api_key", "3f2c9c04c927e1283a2d15121fdb299c")
-            .addQueryParameter("language", "en")
+            .addQueryParameter("language", "en-US")
+            .build()
+        val request = chain.request()
+            .newBuilder()
+            .url(url)
+            .build()
+        chain.proceed(request)
+    }
+    @Provides
+    @Singleton
+    @MySecondLanguage
+    fun provideInterceptorFrance() = Interceptor { chain ->
+        val url = chain.request()
+            .url
+            .newBuilder()
+            .addQueryParameter("api_key", "3f2c9c04c927e1283a2d15121fdb299c")
+            .addQueryParameter("language", "fr")
             .build()
         val request = chain.request()
             .newBuilder()
@@ -44,8 +59,9 @@ object AppModule {
     }
 
     @Provides
+    @Singleton
     fun provideOkHttpClient(
-        interceptor: Interceptor,
+       @MyFirstLanguage interceptor: Interceptor,
         httpLoggingInterceptor: HttpLoggingInterceptor
     ) = OkHttpClient.Builder()
         .addInterceptor(httpLoggingInterceptor)
@@ -53,13 +69,25 @@ object AppModule {
         .build()
 
     @Provides
-    fun provideRetrofit(client: OkHttpClient) = Retrofit.Builder()
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient): Retrofit = Retrofit.Builder()
         .baseUrl("https://api.themoviedb.org/3/")
         .client(client)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
     @Provides
-    fun provideMovieService(retrofit: Retrofit) =
-        retrofit.create(MovieService::class.java)
+    @Singleton
+    fun provideMovieService(retrofit: Retrofit): MovieService = retrofit.create(MovieService::class.java)
+
+//    inline fun <reified T>provideApi(retrofit: Retrofit): T {
+//        return retrofit.create(T::class.java)
+//    }
 }
+
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class MyFirstLanguage
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class MySecondLanguage
